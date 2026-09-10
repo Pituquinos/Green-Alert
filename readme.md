@@ -33,6 +33,8 @@ El generador crea `.env` con secretos aleatorios locales y no sobrescribe uno ex
 
 ## Arquitectura
 
+El [Documento de arquitectura de software](docs/software-architecture-document.md) consolida la línea base, los impulsores de calidad, la aplicación Mini-ADD, las vistas, decisiones, riesgos y hoja de ruta del sistema.
+
 NestJS 11 + TypeScript estricto, React 19 + Vite, Mongoose, MongoDB, RabbitMQ, Docker y Caddy. Hay un monorepo de aplicaciones Nest y un workspace npm para el frontend, con un único lockfile. Nest compila cada aplicación con webpack y resuelve los alias `@app/*` también en los artefactos ejecutables.
 
 ```mermaid
