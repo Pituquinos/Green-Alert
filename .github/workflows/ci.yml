@@ -1,0 +1,24 @@
+name: Base validation
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:integration
+      - run: node scripts/init-env.mjs
+      - run: docker compose config --quiet
+      - run: docker compose up --build --wait --wait-timeout 300
+      - run: curl --fail http://localhost:8080/api/v1/health
+      - if: always()
+        run: docker compose logs --tail 100
+      - if: always()
+        run: docker compose down

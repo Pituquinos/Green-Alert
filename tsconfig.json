@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true,
+    "removeComments": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@app/common": ["libs/common/index.ts"],
+      "@app/config": ["libs/config/index.ts"],
+      "@app/contracts": ["libs/contracts/index.ts"],
+      "@app/database": ["libs/database/index.ts"],
+      "@app/messaging": ["libs/messaging/index.ts"],
+      "@app/security": ["libs/security/index.ts"]
+    }
+  },
+  "include": ["apps/**/*.ts", "libs/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist", "apps/frontend"]
+}

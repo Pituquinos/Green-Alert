@@ -1,0 +1,10 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/libs", "<rootDir>/test"],
+  "testMatch": ["**/*.spec.ts"],
+  "moduleNameMapper": {
+    "^@app/(.*)$": "<rootDir>/libs/$1/index.ts"
+  },
+  "collectCoverageFrom": ["libs/**/*.ts"]
+}

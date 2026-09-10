@@ -1,0 +1,221 @@
+name: green-alert
+x-backend: &backend
+  restart: unless-stopped
+  init: true
+  networks: [green-alert-network]
+  depends_on:
+    mongodb:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  healthcheck:
+    test:
+      [
+        'CMD',
+        'node',
+        '-e',
+        "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+      ]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 90s
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - '${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-8080}:80'
+      - '${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:443'
+    environment:
+      CADDY_SITE: ${CADDY_SITE:-http://localhost}
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [green-alert-network]
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    restart: unless-stopped
+    networks: [green-alert-network]
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: .
+      args:
+        APP_NAME: api-gateway
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      API_GATEWAY_PORT: 3000
+    networks: [green-alert-network]
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  auth-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: auth-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      AUTH_SERVICE_PORT: 3001
+      MONGO_AUTH_URI: ${MONGO_AUTH_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  users-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: users-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3002
+      USERS_SERVICE_PORT: 3002
+      MONGO_USERS_URI: ${MONGO_USERS_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  reports-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: reports-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3003
+      REPORTS_SERVICE_PORT: 3003
+      MONGO_REPORTS_URI: ${MONGO_REPORTS_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  geo-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: geo-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3004
+      GEO_SERVICE_PORT: 3004
+      MONGO_GEO_URI: ${MONGO_GEO_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  evidence-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: evidence-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3005
+      EVIDENCE_SERVICE_PORT: 3005
+      MONGO_EVIDENCE_URI: ${MONGO_EVIDENCE_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  notifications-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: notifications-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3006
+      NOTIFICATIONS_SERVICE_PORT: 3006
+      MONGO_NOTIFICATIONS_URI: ${MONGO_NOTIFICATIONS_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  analytics-service:
+    <<: *backend
+    build:
+      context: .
+      args:
+        APP_NAME: analytics-service
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3007
+      ANALYTICS_SERVICE_PORT: 3007
+      MONGO_ANALYTICS_URI: ${MONGO_ANALYTICS_URI:?Run node scripts/init-env.mjs}
+      RABBITMQ_URI: ${RABBITMQ_URI:?Run node scripts/init-env.mjs}
+
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_AUTH_PASSWORD: ${MONGO_AUTH_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_USERS_PASSWORD: ${MONGO_USERS_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_REPORTS_PASSWORD: ${MONGO_REPORTS_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_GEO_PASSWORD: ${MONGO_GEO_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_EVIDENCE_PASSWORD: ${MONGO_EVIDENCE_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_NOTIFICATIONS_PASSWORD: ${MONGO_NOTIFICATIONS_PASSWORD:?Run node scripts/init-env.mjs}
+      MONGO_ANALYTICS_PASSWORD: ${MONGO_ANALYTICS_PASSWORD:?Run node scripts/init-env.mjs}
+    volumes:
+      - mongodb_data:/data/db
+      - ./infrastructure/mongodb/init-users.js:/docker-entrypoint-initdb.d/init-users.js:ro
+    networks: [green-alert-network]
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-greenalert}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Run node scripts/init-env.mjs}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infrastructure/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks: [green-alert-network]
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  green-alert-network:
+    name: green-alert-network
+    driver: bridge
+volumes:
+  mongodb_data:
+  rabbitmq_data:
+  caddy_data:
+  caddy_config:

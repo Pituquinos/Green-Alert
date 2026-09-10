@@ -1,0 +1,12 @@
+# Decisiones del corte 1–3
+
+1. Monorepo nativo Nest, sin Nx ni Turborepo. Un package.json backend, proyectos en nest-cli.json y alias compartidos; frontend como workspace npm.
+2. Ocho aplicaciones arrancables con una salud HTTP mínima. Los módulos de dominio están declarados pero no tienen controladores, schemas ni operaciones. El gateway todavía no enruta solicitudes a servicios.
+3. Un servidor MongoDB con siete bases y siete usuarios limitados a su base. Ninguna librería exporta schemas de dominio. Analytics deberá consumir eventos y no consultar Reports.
+4. Exchange durable topic greenalert.events. Cada llamada a subscribe declara una cola greenalert.<servicio>.<consumidor> con bindings propios. Así, Analytics y Notifications reciben ambos el mismo evento y réplicas de un consumidor comparten su cola.
+5. Los consumidores deben aportar un validador de payload en runtime. Los tipos TypeScript no validan mensajes externos. Mensajes inválidos y errores del handler van a <cola>.dead sin requeue infinito. No hay consumidores de negocio registrados en este corte.
+6. Reconexión y redeclaración mediante amqp-connection-manager. Publicación persistente confirmada por el broker, timeout de 10 segundos. Entrega al menos una vez: los handlers futuros deben ser idempotentes por id. Un timeout de publicación puede tener resultado incierto; reutilizar el id al reintentar. No hay outbox, retry de negocio ni redrive automático; los mensajes muertos deben revisarse antes de republicarlos. Eventos sin colas vinculadas no se retienen para consumidores futuros.
+7. JWT HS256 con emisor/audiencia fijos y rol validado, guard de roles separado, bcrypt costo 12. Todavía no hay emisión de tokens vía HTTP ni persistencia/rotación de refresh tokens. Configurar JWT_EXPIRES_IN será responsabilidad de Auth; la librería base usa 15 minutos.
+8. Caddy publica HTTP local en 8080; en producción el dominio activa HTTPS. Frontend estático construido con Vite, servido por Caddy interno. No se requiere servidor Vite de desarrollo dentro de producción.
+9. Compose inyecta a cada proceso solo sus credenciales necesarias. Solo Caddy es accesible por el host en configuración base. El override de desarrollo expone el panel del broker en 127.0.0.1.
+10. No se creó infraestructura/docker vacía: los Dockerfiles viven en la raíz y en frontend. Tampoco se crean keys, dist ni node_modules como carpetas versionadas. No hubo funcionalidad existente que reemplazar.

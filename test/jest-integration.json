@@ -1,0 +1,9 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "rootDir": "..",
+  "testMatch": ["**/*.integration-spec.ts"],
+  "moduleNameMapper": {
+    "^@app/(.*)$": "<rootDir>/libs/$1/index.ts"
+  }
+}
